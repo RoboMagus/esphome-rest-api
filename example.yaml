@@ -1,0 +1,45 @@
+
+esphome:
+  name: rest-api-example
+
+esp32:
+  board: wemos_d1_mini32
+  
+external_components:
+  - source: github://RoboMagus/esphome-rest-api
+
+wifi:
+  ssid: !secret WiFi_ssid
+  password: !secret WiFi_password
+
+# Native API for HomeAssistant
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+sensor:
+  - platform: uptime
+    id: uptime_sensor
+    name: Uptime Sensor
+
+switch:
+  - platform: gpio
+    id: led
+    pin: GPIO2
+
+rest_api:
+  port: 8080
+  auth:
+    username: admin
+    password: admin1234
+  endpoints:
+    - path: "/uptime"
+      lambda: |
+        ESP_LOGI("/uptime", "URL=%s, Method=%d", request->url().c_str(), request->method());
+        request->send(200, ESPHOME_F("text/plain"), str_sprintf("uptime=%.2f", id(uptime_sensor).state).c_str());
+    - path: "/led"
+      method: PUT
+      lambda: |
+        ESP_LOGI("/led", "URL=%s, Method=%d", request->url().c_str(), request->method());
+        id(led).toggle();
+        request->send(200, ESPHOME_F("text/plain"), ESPHOME_F("OK"));
