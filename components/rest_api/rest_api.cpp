@@ -60,11 +60,30 @@ void RestApi::handleRequest(AsyncWebServerRequest *request) {
 #else
   const auto &url = request->url();
 #endif
+  
+  const auto method = request->method();
+  const char* method_str = (method == HTTP_GET) ? "GET" : ((method == HTTP_POST) ? "POST" : "??");
 
   auto endpoint = this->endpoints_.find(url.c_str());
   if (endpoint != this->endpoints_.end()) {
     if (endpoint->second.method == request->method()) {
         endpoint->second.func(request);
+#ifdef USE_TEXT_SENSOR
+        if (this->event_sensor_){
+#ifdef USE_ESP8266
+          const auto client_ip = request->client()->remoteIP();
+          this->event_sensor_->publish_state(
+            str_sprintf("[%d.%d.%d.%d]: %s %s (%s)", 
+              client_ip[0], client_ip[1], client_ip[2], client_ip[3], 
+              method_str, 
+              url.c_str(), 
+              "OK")
+          );
+#else
+          this->event_sensor_->publish_state(str_sprintf("%s %s (%s)", method_str, url.c_str(), "OK"));
+#endif
+        }
+#endif
         return;
     }
   }

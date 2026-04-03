@@ -5,6 +5,10 @@
 #include "esphome/components/web_server_base/web_server_base.h"
 #include "esphome/core/component.h"
 
+#ifdef USE_TEXT_SENSOR
+#include "esphome/components/text_sensor/text_sensor.h"
+#endif
+
 #include <functional>
 #include <list>
 #include <map>
@@ -42,6 +46,10 @@ class RestApi final : public Component, public AsyncWebHandler {
 
   float get_setup_priority() const override;
 
+#ifdef USE_TEXT_SENSOR
+  void add_event_sensor(text_sensor::TextSensor * entity) {this->event_sensor_ = entity;}
+#endif
+
   /// Override the web handler's canHandle method.
   bool canHandle(AsyncWebServerRequest *request) const override;
   /// Override the web handler's handleRequest method.
@@ -54,6 +62,9 @@ class RestApi final : public Component, public AsyncWebHandler {
 
 private:
   std::map<const std::string, EpValue> endpoints_;
+#ifdef USE_TEXT_SENSOR
+  text_sensor::TextSensor *event_sensor_{nullptr};
+#endif
 };
 
 }  // namespace esphome::web_server

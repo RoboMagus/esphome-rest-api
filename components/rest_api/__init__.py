@@ -1,7 +1,7 @@
 
 from esphome import automation
 import esphome.codegen as cg
-from esphome.components import web_server_base
+from esphome.components import text_sensor, web_server_base
 from esphome.components.web_server_base import CONF_WEB_SERVER_BASE_ID
 import esphome.config_validation as cv
 from esphome.const import (
@@ -9,6 +9,7 @@ from esphome.const import (
     CONF_ID,
     CONF_LAMBDA,
     CONF_METHOD,
+    CONF_NAME,
     CONF_PASSWORD,
     CONF_PATH,
     CONF_PORT,
@@ -17,11 +18,12 @@ from esphome.const import (
 )
 from esphome.core import CORE, CoroPriority, coroutine_with_priority
 
-AUTO_LOAD = ["json", "web_server_base"]
+AUTO_LOAD = ["text_sensor", "json", "web_server_base"]
 DEPENDENCIES = ["api"]
 CODEOWNERS = ["@RoboMagus"]
 
 CONF_ENDPOINTS = "endpoints"
+CONF_EVENT_SENSOR = "event_sensor"
 
 web_server_ns = cg.esphome_ns.namespace("web_server")
 RestApi = web_server_ns.class_("RestApi", cg.Component)
@@ -49,6 +51,11 @@ CONFIG_SCHEMA = cv.All(
                         ),
                     }
                 ),
+            ),
+            cv.Optional(CONF_EVENT_SENSOR): text_sensor.text_sensor_schema().extend(
+                {
+                    cv.Optional(CONF_NAME, default="Last API event"): cv.string_strict
+                }
             ),
             cv.Required(CONF_ENDPOINTS): cv.ensure_list(
                 cv.Schema(
@@ -85,6 +92,9 @@ async def to_code(config):
         cg.add(paren.set_auth_username(config[CONF_AUTH][CONF_USERNAME]))
         cg.add(paren.set_auth_password(config[CONF_AUTH][CONF_PASSWORD]))
 
+    if CONF_EVENT_SENSOR in config:
+        evt = await text_sensor.new_text_sensor(config[CONF_EVENT_SENSOR])
+        cg.add(var.add_event_sensor(evt))
     for endpoint in config[CONF_ENDPOINTS]:
         lambda_ = await cg.process_lambda(endpoint[CONF_LAMBDA], [(cg.global_ns.namespace("AsyncWebServerRequest *") ,"request")], return_type=cg.void)
         cg.add(var.add_endpoint(endpoint[CONF_PATH], endpoint[CONF_METHOD], lambda_))
